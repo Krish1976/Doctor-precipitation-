@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Prescription Parser</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0;
+            min-height: 600px;
+        }
+
+        .input-section {
+            padding: 40px;
+            background: #f8f9fa;
+            border-right: 1px solid #e9ecef;
+        }
+
+        .output-section {
+            padding: 40px;
+            background: white;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .input-area {
+            width: 100%;
+            height: 300px;
+            padding: 20px;
+            border: 2px dashed #ddd;
+            border-radius: 12px;
+            font-size: 16px;
+            font-family: 'Courier New', monospace;
+            resize: vertical;
+            transition: border-color 0.3s;
+        }
+
+        .input-area:focus {
+            outline: none;
+            border-color: #4facfe;
+            background: #f0f8ff;
+        }
+
+        .parse-btn {
+            width: 100%;
+            padding: 15px;
+            margin-top: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .parse-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .parse-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #4facfe;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .prescription-card {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 15px;
+            transform: translateX(20px);
+            opacity: 0;
+            animation: slideIn 0.5s forwards;
+        }
+
+        .prescription-card:nth-child(even) {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        @keyframes slideIn {
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .medicine-name {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .medicine-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .detail-item {
+            background: rgba(255,255,255,0.2);
+            padding: 8px 12px;
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
+        }
+
+        .detail-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            display: block;
+        }
+
+        .detail-value {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .instructions {
+            background: rgba(255,255,255,0.2);
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 10px;
+            backdrop-filter: blur(10px);
+        }
+
+        .instructions-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-bottom: 5px;
+        }
+
+        .error {
+            background: #ff4757;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        .success-stats {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .stats-number {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .sample-btn {
+            background: transparent;
+            border: 2px solid #4facfe;
+            color: #4facfe;
+            padding: 10px 20px;
+            border-radius: 8px;
+            margin-top: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .sample-btn:hover {
+            background: #4facfe;
+            color: white;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .input-section {
+                border-right: none;
+                border-bottom: 1px solid #e9ecef;
+            }
+            
+            .medicine-details {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏥 Digital Prescription Parser</h1>
+            <p>Convert handwritten prescriptions to structured digital format</p>
+        </div>
+
+        <div class="main-content">
+            <div class="input-section">
+                <h2 class="section-title">
+                    📝 Enter Prescription
+                </h2>
+                
+                <textarea 
+                    id="prescriptionInput" 
+                    class="input-area" 
+                    placeholder="Paste prescription text here...
+
+Example:
+Tab Paraceta 500 - 1-1-1
+Cap Azee 250 - 1 OD × 3 days
+Syp Cyclopam - 5ml TDS
+Tab Omez 20 - 1 BD before food"
+                ></textarea>
+
+                <button id="sampleBtn" class="sample-btn">📋 Load Sample</button>
+                <button id="parseBtn" class="parse-btn">🚀 Parse Prescription</button>
+
+                <div id="loading" class="loading">
+                    <div class="spinner"></div>
+                    <div>Processing prescription...</div>
+                </div>
+            </div>
+
+            <div class="output-section">
+                <h2 class="section-title">
+                    💊 Structured Output
+                </h2>
+                
+                <div id="output">
+                    <div style="text-align: center; color: #999; padding: 50px;">
+                        <div style="font-size: 3rem; margin-bottom: 20px;">📋</div>
+                        <p>Parsed prescription will appear here</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class PrescriptionParser {
+            constructor() {
+                this.initializeElements();
+                this.bindEvents();
+            }
+
+            initializeElements() {
+                this.input = document.getElementById('prescriptionInput');
+                this.parseBtn = document.getElementById('parseBtn');
+                this.sampleBtn = document.getElementById('sampleBtn');
+                this.loading = document.getElementById('loading');
+                this.output = document.getElementById('output');
+            }
+
+            bindEvents() {
+                this.parseBtn.addEventListener('click', () => this.parsePrescription());
+                this.sampleBtn.addEventListener('click', () => this.loadSample());
+                
+                this.input.addEventListener('input', () => {
+                    this.parseBtn.disabled = !this.input.value.trim();
+                });
+            }
+
+            loadSample() {
+                const sample = `Tab Paraceta 500 - 1-1-1
+Cap Azee 250 - 1 OD × 3 days
+Syp Cyclopam - 5ml TDS
+Tab Omez 20 - 1 BD before food
+Tab Crocin 650 - 1 SOS
+Syp Digene - 10ml BD after food`;
+                
+                this.input.value = sample;
+                this.parseBtn.disabled = false;
+            }
+
+            async parsePrescription() {
+                const text = this.input.value.trim();
+                
+                if (!text) {
+                    this.showError('Please enter prescription text');
+                    return;
+                }
+
+                this.showLoading(true);
+
+                try {
+                    // For demo purposes, we'll simulate the API call
+                    // Replace this with actual API call to your Flask backend
+                    const result = await this.simulateApiCall(text);
+                    this.displayResult(result);
+                } catch (error) {
+                    this.showError(error.message);
+                } finally {
+                    this.showLoading(false);
+                }
+            }
+
+            async simulateApiCall(text) {
+                // Simulate API delay
+                await new Promise(resolve => setTimeout(resolve, 2000));
+
+                // Demo parsing logic - replace with actual API call
+                const medicines = this.parseDemoData(text);
+                return {
+                    success: true,
+                    prescription: medicines,
+                    total_medicines: medicines.length
+                };
+            }
+
+            parseDemoData(text) {
+                // This is a simplified demo parser
+                // In production, this would be handled by your Flask API
+                const lines = text.split('\n').filter(line => line.trim());
+                
+                return lines.map((line, index) => {
+                    const commonMedicines = {
+                        'paraceta': {
+                            medicine: 'Paracetamol 500mg',
+                            purpose: 'Fever and pain relief',
+                            instructions: 'Take after food. Avoid alcohol.'
+                        },
+                        'azee': {
+                            medicine: 'Azithromycin 250mg',
+                            purpose: 'Bacterial infection',
+                            instructions: 'Take on empty stomach. Complete full course.'
+                        },
+                        'cyclopam': {
+                            medicine: 'Cyclopam Syrup',
+                            purpose: 'Abdominal cramps',
+                            instructions: 'Shake well before use.'
+                        },
+                        'omez': {
+                            medicine: 'Omeprazole 20mg',
+                            purpose: 'Acidity and gastric issues',
+                            instructions: 'Take before food.'
+                        },
+                        'crocin': {
+                            medicine: 'Crocin 650mg',
+                            purpose: 'Fever and severe pain',
+                            instructions: 'Take with water. Maximum 4 tablets per day.'
+                        },
+                        'digene': {
+                            medicine: 'Digene Syrup',
+                            purpose: 'Acidity and indigestion',
+                            instructions: 'Take after meals.'
+                        }
+                    };
+
+                    const lowerLine = line.toLowerCase();
+                    let medicineData = { medicine: line, purpose: 'As prescribed', instructions: 'Follow doctor\'s advice' };
+
+                    for (const [key, value] of Object.entries(commonMedicines)) {
+                        if (lowerLine.includes(key)) {
+                            medicineData = value;
+                            break;
+                        }
+                    }
+
+                    // Parse dosage patterns
+                    let frequency = 'As directed';
+                    let duration = '5 days';
+                    let dosage = '1 tablet';
+
+                    if (line.includes('1-1-1')) {
+                        frequency = '3 times a day after food';
+                        dosage = '1 tablet';
+                    } else if (line.includes('OD')) {
+                        frequency = 'Once daily';
+                        dosage = '1 capsule';
+                    } else if (line.includes('BD')) {
+                        frequency = '2 times a day';
+                        dosage = '1 tablet';
+                    } else if (line.includes('TDS')) {
+                        frequency = '3 times a day';
+                        dosage = line.includes('ml') ? '5ml' : '1 tablet';
+                    } else if (line.includes('SOS')) {
+                        frequency = 'When needed';
+                        duration = 'As required';
+                    }
+
+                    if (line.includes('× 3 days') || line.includes('x 3 days')) {
+                        duration = '3 days';
+                    }
+
+                    return {
+                        ...medicineData,
+                        dosage,
+                        frequency,
+                        duration
+                    };
+                });
+            }
+
+            displayResult(result) {
+                if (!result.success) {
+                    this.showError('Failed to parse prescription');
+                    return;
+                }
+
+                const medicines = result.prescription;
+                
+                let html = `
+                    <div class="success-stats">
+                        <div class="stats-number">${result.total_medicines}</div>
+                        <div>Medicines Parsed Successfully</div>
+                    </div>
+                `;
+
+                medicines.forEach((medicine, index) => {
+                    html += `
+                        <div class="prescription-card" style="animation-delay: ${index * 0.1}s">
+                            <div class="medicine-name">${medicine.medicine}</div>
+                            
+                            <div class="medicine-details">
+                                <div class="detail-item">
+                                    <span class="detail-label">Dosage</span>
+                                    <div class="detail-value">${medicine.dosage}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Frequency</span>
+                                    <div class="detail-value">${medicine.frequency}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Duration</span>
+                                    <div class="detail-value">${medicine.duration}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Purpose</span>
+                                    <div class="detail-value">${medicine.purpose}</div>
+                                </div>
+                            </div>
+                            
+                            <div class="instructions">
+                                <div class="instructions-label">Instructions:</div>
+                                <div>${medicine.instructions}</div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                this.output.innerHTML = html;
+            }
+
+            showError(message) {
+                this.output.innerHTML = `
+                    <div class="error">
+                        <strong>Error:</strong> ${message}
+                    </div>
+                `;
+            }
+
+            showLoading(show) {
+                this.loading.style.display = show ? 'block' : 'none';
+                this.parseBtn.disabled = show;
+            }
+        }
+
+        // Initialize the app
+        document.addEventListener('DOMContentLoaded', () => {
+            new PrescriptionParser();
+        });
+    </script>
+</body>
+</html>
